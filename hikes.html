@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Dak's Outdoor History</title>
+    <style type="text/css">
+      html, body, #map {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=KEY_GOES_HERE"></script>
+    <script src="js/jpegmeta.js"></script>
+    <!--<ul id="list"></ul>-->
+    <div id="map"></div>
+
+    
+    <!-- Read all files. Add mappable files to the map. -->
+    <script type="text/javascript">
+      window.URL = window.URL || window.webkitURL;  // Take care of vendor prefixes.
+      
+      // Colors for the tracks (this is obviously the best way to do this)
+      var COLORS = ['#4863A0', '#2B547E', '#2B3856', '#151B54', '#000080', '#342D7E', '#15317E', '#151B8D', '#0000A0', '#0020C2', '#0041C2', '#2554C7', '#1569C7', '#2B60DE', '#1F45FC', '#6960EC', '#736AFF', '#357EC7', '#368BC1', '#488AC7', '#3090C7', '#659EC7', '#87AFC7', '#95B9C7', '#728FCE', '#2B65EC', '#306EFF', '#157DEC', '#1589FF', '#6495ED', '#6698FF', '#38ACEC', '#56A5EC', '#5CB3FF', '#3BB9FF', '#79BAEC', '#82CAFA', '#82CAFF', '#A0CFEC', '#B7CEEC', '#B4CFEC', '#C2DFFF', '#C6DEFF', '#AFDCEC', '#ADDFFF', '#BDEDFF', '#CFECEC', '#E0FFFF', '#EBF4FA', '#F0F8FF', '#F0FFFF', '#CCFFFF', '#93FFE8', '#9AFEFF', '#7FFFD4', '#00FFFF', '#7DFDFE', '#57FEFF', '#8EEBEC', '#50EBEC', '#4EE2EC', '#81D8D0', '#92C7C7', '#77BFC7', '#78C7C7', '#48CCCD', '#43C6DB', '#46C7C7', '#7BCCB5', '#43BFC7', '#3EA99F', '#3B9C9C', '#438D80', '#348781', '#307D7E', '#5E7D7E', '#4C787E', '#008080', '#4E8975', '#78866B', '#848b79', '#617C58', '#728C00', '#667C26', '#254117', '#306754', '#347235', '#437C17', '#387C44', '#347C2C', '#347C17', '#348017', '#4E9258', '#6AA121', '#4AA02C', '#41A317', '#3EA055', '#6CBB3C', '#6CC417', '#4CC417', '#52D017', '#4CC552', '#54C571', '#99C68E', '#89C35C', '#85BB65', '#8BB381', '#9CB071', '#B2C248', '#9DC209', '#A1C935', '#7FE817', '#59E817', '#57E964', '#64E986', '#5EFB6E', '#00FF00', '#5FFB17', '#87F717', '#8AFB17', '#6AFB92', '#98FF98', '#B5EAAA', '#C3FDB8', '#CCFB5D', '#B1FB17', '#BCE954', '#EDDA74', '#EDE275', '#FFE87C', '#FFFF00', '#FFF380', '#FFFFC2', '#FFFFCC', '#FFF8C6', '#FFF8DC', '#F5F5DC', '#FBF6D9', '#FAEBD7', '#F7E7CE', '#FFEBCD', '#F3E5AB', '#ECE5B6', '#FFE5B4', '#FFDB58', '#FFD801', '#FDD017', '#EAC117', '#F2BB66', '#FBB917', '#FBB117', '#FFA62F', '#E9AB17', '#E2A76F', '#DEB887', '#FFCBA4', '#C9BE62', '#E8A317', '#EE9A4D', '#C8B560', '#D4A017', '#C2B280', '#C7A317', '#C68E17', '#B5A642', '#ADA96E', '#C19A6B', '#CD7F32', '#C88141', '#C58917', '#AF9B60', '#AF7817', '#B87333', '#966F33', '#806517', '#827839', '#827B60', '#786D5F', '#493D26', '#483C32', '#6F4E37', '#835C3B', '#7F5217', '#7F462C', '#C47451', '#C36241', '#C35817', '#C85A17', '#CC6600', '#E56717', '#E66C2C', '#F87217', '#F87431', '#E67451', '#FF8040', '#F88017', '#FF7F50', '#F88158', '#F9966B', '#E78A61', '#E18B6B', '#E77471', '#F75D59', '#E55451', '#E55B3C', '#FF0000', '#FF2400', '#F62217', '#F70D1A', '#F62817', '#E42217', '#E41B17', '#DC381F', '#C34A2C', '#C24641', '#C04000', '#C11B17', '#9F000F', '#990012', '#8C001A', '#954535', '#7E3517', '#8A4117', '#7E3817', '#800517', '#810541', '#7D0541', '#7E354D', '#7D0552', '#7F4E52', '#7F5A58', '#7F525D', '#B38481', '#C5908E', '#C48189', '#C48793', '#E8ADAA', '#ECC5C0', '#EDC9AF', '#FDD7E4', '#FCDFFF', '#FFDFDD', '#FBBBB9', '#FAAFBE', '#FAAFBA', '#F9A7B0', '#E7A1B0', '#E799A3', '#E38AAE', '#F778A1', '#E56E94', '#F660AB', '#FC6C85', '#F6358A', '#F52887', '#E45E9D', '#E4287C', '#F535AA', '#FF00FF', '#E3319D', '#F433FF', '#D16587', '#C25A7C', '#CA226B', '#C12869', '#C12267', '#C25283', '#C12283', '#B93B8F', '#7E587E', '#571B7E', '#583759', '#4B0082', '#461B7E', '#4E387E', '#614051', '#5E5A80', '#6A287E', '#7D1B7E', '#A74AC7', '#B048B5', '#6C2DC7', '#842DCE', '#8D38C9', '#7A5DC7', '#7F38EC', '#8E35EF', '#893BFF', '#8467D7', '#A23BEC', '#B041FF', '#C45AEC', '#9172EC', '#9E7BFF', '#D462FF', '#E238EC']
+      
+      // Have the client read through all files in the gpx index (Obviously the best choice here - scales so good)
+      $.ajax({
+        url: "gpx/",
+        success: function(data){
+          //$(data).find("a:contains(.gpx)").each(function(){   // WTF. Y U NO WORK?!
+          $(data).find("a:contains(.)").each(function(){
+          // Loop through each file in the dir
+          var file = $(this).attr("href");
+          outputGpxFunction(file);
+          outputTcxFunction(file);
+          outputImageFunction(file);
+          });
+        }
+      });
+      
+      /**
+      * Create a track on the map from a GPX file (OSMAnd). If the file is not GPX, return.
+      */
+      function outputGpxFunction(gpxFileURL) {
+        if (!gpxFileURL || !gpxFileURL.toLowerCase().endsWith('.gpx')) {
+          return;
+        }
+      
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', "gpx/" + gpxFileURL, true);
+        xhr.responseType = 'document';
+        xhr.origin = 'Access-Control-Allow-Origin=*'
+
+        xhr.onload = function(e) {
+          if (this.status == 200) {
+            var currentFileOutput = []
+                  
+            // Output the GPX file as text
+            //var newListEntryNode = document.createElement("LI"); 
+            //var textNode = document.createTextNode(gpxFileURL);
+            //newListEntryNode.appendChild(textNode);   
+            //document.getElementById('list').appendChild(newListEntryNode);
+            
+            var tracks = this.response.getElementsByTagName('trk');
+            for (var i = 0; i < tracks.length; i++) {
+            
+              var trackSegs = tracks[i].getElementsByTagName('trkseg');
+              for (var j = 0; j < trackSegs.length; j++) {
+              
+                var currentHikeCoords = [];
+                
+                var trackPts = trackSegs[j].getElementsByTagName('trkpt');
+                for (var k = 0; k < trackPts.length; k++) {
+                
+                  var lat = trackPts[k].getAttribute('lat');
+                  var lon = trackPts[k].getAttribute('lon');
+                  
+                  // Save the next step in the track
+                  currentHikeCoords.push({lat: parseFloat(lat), lng: parseFloat(lon)})
+                } // End trkpts loop
+                
+                // Create the track segment
+                var currentHike = new google.maps.Polyline({
+                  path: currentHikeCoords,
+                  geodesic: true,
+                  strokeColor: COLORS[Math.floor(Math.random() * 250)],
+                  strokeOpacity: 1.0,
+                  strokeWeight: 2
+                });
+                // Push the track segment
+                currentHike.setMap(map);
+                
+              } // End trksegs loop
+            } // End trks loop
+          }
+        };
+
+        xhr.send();
+      }
+      
+      /**
+      * Create a track on the map from a TCX file (Google Fit). If the file is not GPX, return.
+      */
+      function outputTcxFunction(tcxFileURL) {
+        if (!tcxFileURL || !tcxFileURL.toLowerCase().endsWith('.tcx')) {
+          return;
+        }
+      
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', "gpx/" + tcxFileURL, true);
+        xhr.responseType = 'document';
+        xhr.origin = 'Access-Control-Allow-Origin=*'
+
+        xhr.onload = function(e) {
+          if (this.status == 200) {
+            var currentFileOutput = []
+            
+            var doNotOutput = false;
+            
+            if (this.response !== null) {
+              
+              var hasLongEnoughLaps = false;
+              var laps = this.response.getElementsByTagName('Lap');
+              for (var i = 0; i < laps.length; i++) {
+              
+                var tracks = laps[i].getElementsByTagName('Track');
+                for (var j = 0; j < tracks.length; j++) {
+                
+                  var currentHikeCoords = [];
+                  
+                  var trackPts = tracks[j].getElementsByTagName('Trackpoint');
+                  for (var k = 0; k < trackPts.length; k++) {
+                  
+                    // There should only be one position, but be safe
+                    var positions = trackPts[k].getElementsByTagName('Position');
+                    for (var l = 0; l < positions.length; l++) {
+                      
+                      var lat = positions[l].getElementsByTagName('LatitudeDegrees')[0].textContent;
+                      var lon = positions[l].getElementsByTagName('LongitudeDegrees')[0].textContent;
+                      
+                      // Save the next step in the track
+                      if (typeof lat !== 'undefined' && lat !== null && typeof lon !== 'undefined' && lon !== null ) {
+                        // Don't keep anything in the Portland area
+                        if ((parseFloat(lat) < 45.708526 && parseFloat(lon) < -122.780499
+                          || parseFloat(lat) > 45.409430 && parseFloat(lon) < -122.411436)
+                          && !doNotOutput) {
+                          
+                          doNotOutput = true;
+                        }
+                        
+                        currentHikeCoords.push({lat: parseFloat(lat), lng: parseFloat(lon)})
+                      }
+                    }
+                  } // End Trackpoint loop
+                  
+                  // Create the track segment if there's enough points
+                  if (currentHikeCoords.length > 20 && !doNotOutput) {
+                    hasLongEnoughLaps = true;
+                  
+                    var currentHike = new google.maps.Polyline({
+                      path: currentHikeCoords,
+                      geodesic: true,
+                      strokeColor: COLORS[Math.floor(Math.random() * 250)],
+                      strokeOpacity: 1.0,
+                      strokeWeight: 2
+                    });
+                    // Push the track segment
+                    currentHike.setMap(map);
+                  }
+                  
+                } // End tracks loop
+              } // End laps loop
+              
+              //if (doNotOutput) {
+              //  var newListEntryNode = document.createElement("LI"); 
+              //  var textNode = document.createTextNode('!!!!' + tcxFileURL);
+              //  newListEntryNode.appendChild(textNode);
+              //  document.getElementById('list').appendChild(newListEntryNode);
+              //}
+              //if (!hasLongEnoughLaps) {
+              //  var newListEntryNode = document.createElement("LI"); 
+              //  var textNode = document.createTextNode('~~~~' + tcxFileURL);
+              //  newListEntryNode.appendChild(textNode);
+              //  document.getElementById('list').appendChild(newListEntryNode);
+              //}
+            } // End response !== null
+          }
+        };
+
+        xhr.send();
+      }
+      
+      /**
+      * Create a marker on the map from an image file. If the file is not JPG, return.
+      */
+      function outputImageFunction(imageFileURL) {
+        if (!imageFileURL || !imageFileURL.toLowerCase().endsWith('.jpg')) {
+          return;
+        }
+        
+        var smallIcon = {
+          url: 'https://maps.google.com/mapfiles/ms/icons/blue.png',
+          // This marker is 20 pixels wide by 20 pixels high.
+          scaledSize: new google.maps.Size(20, 20),
+        };
+      
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', "gpx/" + imageFileURL, true);
+        xhr.responseType = 'blob';
+        xhr.origin = 'Access-Control-Allow-Origin=*'
+        
+        xhr.onload = function(e) {
+          if (this.status == 200) {
+            
+            if (this.response !== null) {
+              var blob = new Blob([this.response], {type: 'image/jpg'});
+              
+              function display(data, filename) {
+                var jpeg = new JpegMeta.JpegFile(data, filename);
+                
+                if (jpeg.gps) {
+                  var contentString = '<a href="gpx/full_res/' + imageFileURL + '" target="_blank"><img src="gpx/' + imageFileURL + '"></a>';
+                  var lat = jpeg.gps.latitude;
+                  var lon = jpeg.gps.longitude;
+                  // Prevent duplicate marker locations
+                  while (markersMap[lon]) {
+                    // Also gdit JS. += is strcat and -= is numeric
+                    lon -= .0002
+                  }
+                  markersMap[lon] = lat
+                  
+                  var imageLatLng = new google.maps.LatLng(lat, lon);
+                  var marker = new google.maps.Marker({
+                    position: imageLatLng,
+                    icon: smallIcon
+                  });
+                  
+                  marker.addListener('click', function() {
+                    if(openInfoWindow) {
+                      openInfoWindow.close();
+                    }
+                    openInfoWindow = new google.maps.InfoWindow({content: contentString});
+                    openInfoWindow.open(map, marker);
+                  });
+
+                  marker.setMap(map);
+                }// else {
+                 // var newListEntryNode = document.createElement("LI"); 
+                 // var textNode = document.createTextNode('@@@@' + imageFileURL);
+                 // newListEntryNode.appendChild(textNode);
+                 // document.getElementById('list').appendChild(newListEntryNode);
+                 //}
+              }
+              
+              var dataurl_reader = new FileReader();
+              dataurl_reader.readAsDataURL(blob);
+              
+              dataurl_reader.onloadend = function() {
+                $("img").src = this.result;
+                display(atob(this.result.replace(/^.*?,/,'')), imageFileURL);
+              }
+              
+            } // End response !== null
+          }
+        };
+        
+        xhr.send();
+      }
+      
+      //
+      // Make the map
+      //
+      var mapElement = document.getElementById("map");
+      //Build list of map types.
+      var mapTypeIds = []
+      for(var type in google.maps.MapTypeId) {
+        mapTypeIds.push(google.maps.MapTypeId[type]);
+      }
+      mapTypeIds.push("OSM");
+      
+      var map = new google.maps.Map(mapElement, {
+        // Center at Portland
+        center: new google.maps.LatLng(45.5200000, -122.6819444),
+        zoom: 9,
+        mapTypeId: "OSM",
+        mapTypeControlOptions: {
+          mapTypeIds: mapTypeIds
+        }
+      });
+      
+      // Used to keep track of the currently opened infowindow so it can be closed automatically
+      var openInfoWindow;
+      var markersMap = {};
+      
+      // Use OSM tiles instead of Google's by default
+      map.mapTypes.set("OSM", new google.maps.ImageMapType({
+        getTileUrl: function(coord, zoom) {
+            return "https://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
+        },
+        tileSize: new google.maps.Size(256, 256),
+        name: "OpenStreetMap",
+        maxZoom: 18
+      }));
+    </script>
+  </body>
+</html>
