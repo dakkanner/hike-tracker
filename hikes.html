@@ -15,7 +15,7 @@
   </head>
   <body>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=KEY_GOES_HERE"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=GOOGLE_MAPS_API_KEY_GOES_HERE"></script>
     <script src="js/jpegmeta.js"></script>
     <!--<ul id="list"></ul>-->
     <div id="map"></div>
@@ -44,6 +44,15 @@
           });
         }
       });
+      
+      function metersToFeet(valueInMeters) {
+        return Math.round(valueInMeters * 3.28);
+      }
+      
+      function metersToMiles(valueInMeters) {
+        // Rounds to 2 decimal places and returns as a string
+        return (valueInMeters * 0.000621371).toFixed(2);
+      }
       
       /**
       * Create a track on the map from a GPX file (OSMAnd). If the file is not GPX, return.
@@ -93,22 +102,19 @@
                   // Get the elevation
                   if (trackPts[k].getElementsByTagName('ele')[0]) {
                     var elevation = trackPts[k].getElementsByTagName('ele')[0].textContent;
-                    if (elevation > maxElevation) {
-                      maxElevation = elevation;
-                    }
-                    if (elevation < minElevation) {
-                      minElevation = elevation;
-                    }
+                    
+                    minElevation = Math.min(minElevation, elevation);
+                    maxElevation = Math.max(maxElevation, elevation);
                   }
                 } // End trkpts loop
                 
-                var color = COLORS[Math.floor(Math.random() * 250)];
+                var color = COLORS[Math.floor(Math.random() * (COLORS.length - 1))];
                 var totalElevation;
                 if (minElevation != 10000) {
                   totalElevation = maxElevation - minElevation;
-                  // Anything more than 500m (1640ft) elevation diff. is red
-                  var fraction = Math.min(totalElevation / 500.0, 1);
-                  var index = Math.floor(fraction * REDS.length - 1);
+                  // Anything more than 400m (1300ft) elevation diff. is red
+                  var fraction = Math.min(totalElevation / 400.0, 1);
+                  var index = Math.floor(fraction * (REDS.length - 1));
                   color = REDS[index];
                 }
                 
@@ -123,7 +129,7 @@
                 
                 var contentString;
                 if (minElevation != 10000) {
-                      contentString = minElevation + 'm to ' + maxElevation + 'm (' + Math.floor(totalElevation * 3.28) + 'ft)';
+                  contentString = metersToFeet(minElevation) + 'ft to ' + metersToFeet(maxElevation) + 'ft (' + metersToFeet(totalElevation) + 'ft)';
                 } else {
                   contentString = 'No elevation data in this track';
                 }
@@ -165,6 +171,7 @@
             // Elevation in meters
             var minElevation = 10000;
             var maxElevation = -10000;
+            var totalDistance = 0;
             var firstPosition;
             var doNotOutput = false;
             
@@ -210,57 +217,67 @@
                     // Get the elevation
                     if (trackPts[k].getElementsByTagName('AltitudeMeters')[0]) {
                       var elevation = trackPts[k].getElementsByTagName('AltitudeMeters')[0].textContent;
-                      if (elevation > maxElevation) {
-                        maxElevation = elevation;
-                      }
-                      if (elevation < minElevation) {
-                        minElevation = elevation;
-                      }
+                    
+                      minElevation = Math.min(minElevation, elevation);
+                      maxElevation = Math.max(maxElevation, elevation);
                     }
                   } // End Trackpoint loop
-                  
-                  // Create the track segment if there's enough points
-                  if (currentHikeCoords.length > 20 && !doNotOutput) {
-                    hasLongEnoughLaps = true;
-                
-                    var color = COLORS[Math.floor(Math.random() * 250)];
-                    var totalElevation;
-                    if (minElevation != 10000) {
-                      totalElevation = maxElevation - minElevation;
-                      // Anything more than 500m (1640ft) elevation diff. is red
-                      var fraction = Math.min(totalElevation / 500.0, 1);
-                      var index = Math.floor(fraction * REDS.length - 1);
-                      color = REDS[index];
-                    }
-                  
-                    var currentHike = new google.maps.Polyline({
-                      path: currentHikeCoords,
-                      geodesic: true,
-                      strokeColor: color,
-                      strokeOpacity: 1.0,
-                      strokeWeight: 2
-                    });
-                
-                    var contentString;
-                    if (minElevation != 10000) {
-                      contentString = minElevation + 'm to ' + maxElevation + 'm (' + Math.floor(totalElevation * 3.28) + 'ft)';
-                    } else {
-                      contentString = 'No elevation data in this track';
-                    }
-                    
-                    currentHike.addListener('click', function() {
-                      if(openInfoWindow) {
-                        openInfoWindow.close();
-                      }
-                      openInfoWindow = new google.maps.InfoWindow({content: contentString});
-                      openInfoWindow.setPosition(firstPosition);
-                      openInfoWindow.open(map, currentHike);
-                    });
-                    // Push the track segment
-                    currentHike.setMap(map);
-                  }
                 } // End tracks loop
+                
+                // Add to the total distance if the property exists
+                var distances = laps[i].getElementsByTagName('DistanceMeters');
+                if (distances[distances.length - 1]) {
+                  var lapDistance = distances[distances.length - 1].textContent;
+                  totalDistance += parseFloat(lapDistance);
+                }
+                
               } // End laps loop
+                  
+              // Create the track if there's enough points
+              if (currentHikeCoords.length > 20 && !doNotOutput) {
+                hasLongEnoughLaps = true;
+            
+                var color = COLORS[Math.floor(Math.random() * (COLORS.length - 1))];
+                var totalElevation;
+                if (minElevation != 10000) {
+                  totalElevation = maxElevation - minElevation;
+                  // Anything more than 400m (1300ft) elevation diff. is red
+                  var fraction = Math.min(totalElevation / 400.0, 1);
+                  var index = Math.floor(fraction * (REDS.length - 1));
+                  color = REDS[index];
+                }
+              
+                var currentHike = new google.maps.Polyline({
+                  path: currentHikeCoords,
+                  geodesic: true,
+                  strokeColor: color,
+                  strokeOpacity: 1.0,
+                  strokeWeight: 2
+                });
+            
+                var contentString;
+                
+                if (minElevation != 10000) {
+                  contentString = metersToFeet(minElevation) + 'ft to ' + metersToFeet(maxElevation) + 'ft (' + metersToFeet(totalElevation) + 'ft)';
+                } else {
+                  contentString = 'No elevation data in this track';
+                }
+                
+                if (totalDistance > 0) {
+                  contentString += "<br>" + metersToMiles(totalDistance) + 'mi total distance';
+                }
+                
+                currentHike.addListener('click', function() {
+                  if(openInfoWindow) {
+                    openInfoWindow.close();
+                  }
+                  openInfoWindow = new google.maps.InfoWindow({content: contentString});
+                  openInfoWindow.setPosition(firstPosition);
+                  openInfoWindow.open(map, currentHike);
+                });
+                // Push the track segment
+                currentHike.setMap(map);
+              }
               
               //if (doNotOutput) {
               //  var newListEntryNode = document.createElement("LI"); 
@@ -368,6 +385,7 @@
         mapTypeIds.push(google.maps.MapTypeId[type]);
       }
       mapTypeIds.push("OSM");
+      mapTypeIds.push("TF Outdoors");
       
       var map = new google.maps.Map(mapElement, {
         // Center at Portland
@@ -383,14 +401,24 @@
       var openInfoWindow;
       var markersMap = {};
       
-      // Use OSM tiles instead of Google's by default
+      // Add OSM tiles
       map.mapTypes.set("OSM", new google.maps.ImageMapType({
         getTileUrl: function(coord, zoom) {
             return "https://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
         },
         tileSize: new google.maps.Size(256, 256),
         name: "OpenStreetMap",
-        maxZoom: 18
+        maxZoom: 19
+      }));
+      // Add OSM ThunderForest's Outdoors tiles
+      map.mapTypes.set("TF Outdoors", new google.maps.ImageMapType({
+        getTileUrl: function(coord, zoom) {
+            //https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=<insert-your-apikey-here>
+            return "https://tile.thunderforest.com/outdoors/" + zoom + "/" + coord.x + "/" + coord.y + ".png?apikey=THUNDERFOREST_API_KEY_GOES_HERE";
+        },
+        tileSize: new google.maps.Size(256, 256),
+        name: "ThunderForest Outdoors",
+        maxZoom: 19
       }));
     </script>
   </body>
