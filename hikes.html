@@ -57,9 +57,6 @@
             outputGpxFunction(file);
             outputTcxFunction(file);
             outputImageFunction(file);
-            
-            //filesProcessed++;
-            //setProgress(filesProcessed, filesTotal)
           });
         }
       });
@@ -218,7 +215,7 @@
                       
                       // Save the next step in the track
                       if (typeof lat !== 'undefined' && lat !== null && typeof lon !== 'undefined' && lon !== null ) {
-                        // Don't keep anything in the Portland area
+                        // Don't show anything in the Portland area
                         if ((parseFloat(lat) < 45.708526 && parseFloat(lon) < -122.780499
                           || parseFloat(lat) > 45.409430 && parseFloat(lon) < -122.411436)
                           && !doNotOutput) {
@@ -435,7 +432,7 @@
         // Center at Portland
         center: new google.maps.LatLng(45.5200000, -122.6819444),
         zoom: 9,
-        mapTypeId: "OSM",
+        mapTypeId: google.maps.MapTypeId.TERRAIN,
         mapTypeControlOptions: {
           mapTypeIds: mapTypeIds
         }
