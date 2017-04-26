@@ -190,68 +190,61 @@
             var maxElevation = -10000;
             var totalDistance = 0;
             var firstPosition;
-            var doNotOutput = false;
+            var portland = false;
+            var onlyPortland = true;
             
             if (this.response !== null) {
-              
+            
+              var currentHikeCoords = [];
               var hasLongEnoughLaps = false;
+              
+              // Add to the total dist
               var laps = this.response.getElementsByTagName('Lap');
               for (var i = 0; i < laps.length; i++) {
-              
-                var tracks = laps[i].getElementsByTagName('Track');
-                for (var j = 0; j < tracks.length; j++) {
-                
-                  var currentHikeCoords = [];
-                  
-                  var trackPts = tracks[j].getElementsByTagName('Trackpoint');
-                  for (var k = 0; k < trackPts.length; k++) {
-                  
-                    // There should only be one position, but be safe
-                    var positions = trackPts[k].getElementsByTagName('Position');
-                    for (var l = 0; l < positions.length; l++) {
-                      
-                      var lat = positions[l].getElementsByTagName('LatitudeDegrees')[0].textContent;
-                      var lon = positions[l].getElementsByTagName('LongitudeDegrees')[0].textContent;
-                      
-                      // Save the next step in the track
-                      if (typeof lat !== 'undefined' && lat !== null && typeof lon !== 'undefined' && lon !== null ) {
-                        // Don't show anything in the Portland area
-                        if ((parseFloat(lat) < 45.708526 && parseFloat(lon) < -122.780499
-                          || parseFloat(lat) > 45.409430 && parseFloat(lon) < -122.411436)
-                          && !doNotOutput) {
-                          
-                          doNotOutput = true;
-                        }
-                        
-                        currentHikeCoords.push({lat: parseFloat(lat), lng: parseFloat(lon)})
-                  
-                        if (!firstPosition) {
-                          firstPosition = new google.maps.LatLng(parseFloat(lat), parseFloat(lon));
-                        }
-                      }
-                    }
-                  
-                    // Get the elevation
-                    if (trackPts[k].getElementsByTagName('AltitudeMeters')[0]) {
-                      var elevation = trackPts[k].getElementsByTagName('AltitudeMeters')[0].textContent;
-                    
-                      minElevation = Math.min(minElevation, elevation);
-                      maxElevation = Math.max(maxElevation, elevation);
-                    }
-                  } // End Trackpoint loop
-                } // End tracks loop
-                
-                // Add to the total distance if the property exists
                 var distances = laps[i].getElementsByTagName('DistanceMeters');
                 if (distances[distances.length - 1]) {
                   var lapDistance = distances[distances.length - 1].textContent;
                   totalDistance += parseFloat(lapDistance);
                 }
+              } // End Lap loop
+                  
+              var altitudes = this.response.getElementsByTagName('AltitudeMeters');
+              for (var k = 0; k < altitudes.length; k++) {
+                // Get the elevation
+                if (altitudes[k]) {
+                  var elevation = altitudes[k].textContent;
                 
-              } // End laps loop
+                  minElevation = Math.min(minElevation, elevation);
+                  maxElevation = Math.max(maxElevation, elevation);
+                }
+              } // End AltitudeMeters loop
+              
+              // Save each position, but without Portland
+              var positions = this.response.getElementsByTagName('Position');
+              for (var l = 0; l < positions.length; l++) {
+                
+                var lat = positions[l].getElementsByTagName('LatitudeDegrees')[0].textContent;
+                var lon = positions[l].getElementsByTagName('LongitudeDegrees')[0].textContent;
+                
+                // Save the next step in the track
+                if (typeof lat !== 'undefined' && lat !== null && typeof lon !== 'undefined' && lon !== null ) {
+                  // Don't show anything in the Portland area
+                  if (45.409430 < parseFloat(lat) < 45.708526
+                      && -122.780499 < parseFloat(lon) < -122.411436) {
+                    portland = true;
+                  } else {
+                    onlyPortland = false;
+                    currentHikeCoords.push({lat: parseFloat(lat), lng: parseFloat(lon)});
+                  }
+                  
+                  if (!firstPosition) {
+                    firstPosition = new google.maps.LatLng(parseFloat(lat), parseFloat(lon));
+                  }
+                }
+              } // End Position loop
                   
               // Create the track if there's enough points
-              if (currentHikeCoords.length > 20 && !doNotOutput) {
+              if (currentHikeCoords.length > 20) {
                 hasLongEnoughLaps = true;
             
                 var color = COLORS[Math.floor(Math.random() * (COLORS.length - 1))];
@@ -296,15 +289,19 @@
                 currentHike.setMap(map);
               }
               
-              //if (doNotOutput) {
-              //  var newListEntryNode = document.createElement("LI"); 
-              //  var textNode = document.createTextNode('!!!!' + tcxFileURL);
+              //if (portland) {
+              //  var newListEntryNode = document.createElement("LI");
+              //  var str = 'Portland  ' + tcxFileURL;
+              //  if (onlyPortland) {
+              //    str += " only"
+              //  }
+              //  var textNode = document.createTextNode(str);
               //  newListEntryNode.appendChild(textNode);
               //  document.getElementById('list').appendChild(newListEntryNode);
               //}
               //if (!hasLongEnoughLaps) {
               //  var newListEntryNode = document.createElement("LI"); 
-              //  var textNode = document.createTextNode('~~~~' + tcxFileURL);
+              //  var textNode = document.createTextNode('Too short ' + tcxFileURL);
               //  newListEntryNode.appendChild(textNode);
               //  document.getElementById('list').appendChild(newListEntryNode);
               //}
@@ -450,7 +447,6 @@
       // Add OSM ThunderForest's Outdoors tiles
       map.mapTypes.set("TF Outdoors", new google.maps.ImageMapType({
         getTileUrl: function(coord, zoom) {
-            //https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=<insert-your-apikey-here>
             return "https://tile.thunderforest.com/outdoors/" + zoom + "/" + coord.x + "/" + coord.y + ".png?apikey=THUNDERFOREST_API_KEY_GOES_HERE";
         },
         tileSize: new google.maps.Size(256, 256),
