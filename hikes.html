@@ -26,9 +26,11 @@
     </style>
   </head>
   <body>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=GOOGLE_MAPS_API_KEY_GOES_HERE"></script>
-    <script src="js/jpegmeta.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAFW_kGuxnfmBCCoJcrwgca0yXojVJVSR0"></script>
+		<script type="text/javascript" src="https://threejs.org/build/three.min.js"></script>
+    <script type="text/javascript" src="js/jpegmeta.js"></script>
+		<script type="text/javascript" src="js/sphere.js"></script>
     <!--<ul id="list"></ul>-->
     <div id="progressBar"><div id="bar">Loading</div></div>
     <div id="map"></div>
@@ -57,6 +59,7 @@
             outputGpxFunction(file);
             outputTcxFunction(file);
             outputImageFunction(file);
+            outputPhotoSphereFunction(file);
           });
         }
       });
@@ -323,7 +326,7 @@
         
         var smallIcon = {
           url: 'https://maps.google.com/mapfiles/ms/icons/blue.png',
-          // This marker is 20 pixels wide by 20 pixels high.
+          // This marker will be 20 pixels wide by 20 pixels high.
           scaledSize: new google.maps.Size(20, 20),
         };
       
@@ -349,7 +352,7 @@
                     // Also gdit JS. += is strcat and -= is numeric
                     lon -= .0002
                   }
-                  markersMap[lon] = lat
+                  markersMap[lon] = lat;
                   
                   var imageLatLng = new google.maps.LatLng(lat, lon);
                   var marker = new google.maps.Marker({
@@ -387,6 +390,65 @@
           }
         };
         
+        xhr.send();
+      }
+      
+      /**
+      * Create a PhotoSphere marker on the map from a .sphere custom file. If the file is not '.sphere', return.
+      */
+      function outputPhotoSphereFunction(sphereFileURL) {
+        if (!sphereFileURL || !sphereFileURL.toLowerCase().endsWith('.sphere')) {
+          return;
+        }
+        
+        var sphereIcon = {
+          url: 'images/photosphere_marker2.png',
+          // This marker will be 20 pixels wide by 20 pixels high.
+          scaledSize: new google.maps.Size(20, 20),
+        };
+      
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', "gpx/" + sphereFileURL, true);
+        xhr.responseType = 'document';
+        xhr.origin = 'Access-Control-Allow-Origin=*'
+
+        xhr.onload = function(e) {
+          if (this.status == 200) {            
+            var name = this.response.getElementsByTagName('name')[0].textContent;
+            var lat = this.response.getElementsByTagName('lat')[0].textContent;
+            var lon = this.response.getElementsByTagName('lon')[0].textContent;
+            var link = this.response.getElementsByTagName('link')[0].textContent;
+            
+            // Prevent duplicate marker locations
+            while (markersMap[lon]) {
+              // Also gdit JS. += is strcat and -= is numeric
+              lon -= .0002
+            }
+            markersMap[lon] = lat;
+                  
+            var imageLatLng = new google.maps.LatLng(lat, lon);
+            var marker = new google.maps.Marker({
+              position: imageLatLng,
+              icon: sphereIcon
+            });
+            
+            var contentString = '<a href="' + link + '" target="_blank">' + name + ' (open in a new tab)</a><br><iframe src="' + link + '" height="400px" width="600px" scrolling="no"></iframe>';
+            
+            //var contentString = '<a href="' + link + '" target="_blank">' + name + '</a>';
+            marker.addListener('click', function() {
+              if(openInfoWindow) {
+                openInfoWindow.close();
+              }
+              openInfoWindow = new google.maps.InfoWindow({content: contentString});
+              openInfoWindow.open(map, marker);
+            });
+
+            marker.setMap(map);
+            
+            incrementProgress();
+          }
+        };
+
         xhr.send();
       }
       
@@ -441,16 +503,17 @@
             return "https://tile.openstreetmap.org/" + zoom + "/" + coord.x + "/" + coord.y + ".png";
         },
         tileSize: new google.maps.Size(256, 256),
-        name: "OpenStreetMap",
+        name: "OSM",
         maxZoom: 19
       }));
       // Add OSM ThunderForest's Outdoors tiles
       map.mapTypes.set("TF Outdoors", new google.maps.ImageMapType({
         getTileUrl: function(coord, zoom) {
+            //https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=<insert-your-apikey-here>
             return "https://tile.thunderforest.com/outdoors/" + zoom + "/" + coord.x + "/" + coord.y + ".png?apikey=THUNDERFOREST_API_KEY_GOES_HERE";
         },
         tileSize: new google.maps.Size(256, 256),
-        name: "OSM - ThunderForest Outdoors",
+        name: "OSM - TF Outdoors",
         maxZoom: 19
       }));
     </script>
