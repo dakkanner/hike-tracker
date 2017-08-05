@@ -153,9 +153,7 @@
                   contentString = 'No elevation data in this track';
                 }
                 currentHike.addListener('click', function() {
-                  if(openInfoWindow) {
-                    openInfoWindow.close();
-                  }
+                  clearMapOfClutter();
                   openInfoWindow = new google.maps.InfoWindow({content: contentString});
                   openInfoWindow.setPosition(firstPosition);
                   openInfoWindow.open(map, currentHike);
@@ -281,9 +279,7 @@
                 }
                 
                 currentHike.addListener('click', function() {
-                  if(openInfoWindow) {
-                    openInfoWindow.close();
-                  }
+                  clearMapOfClutter();
                   openInfoWindow = new google.maps.InfoWindow({content: contentString});
                   openInfoWindow.setPosition(firstPosition);
                   openInfoWindow.open(map, currentHike);
@@ -362,9 +358,7 @@
                   
                   var contentString = '<a href="gpx/full_res/' + imageFileURL + '" target="_blank"><img src="gpx/' + imageFileURL + '"></a>';
                   marker.addListener('click', function() {
-                    if(openInfoWindow) {
-                      openInfoWindow.close();
-                    }
+                    clearMapOfClutter();
                     openInfoWindow = new google.maps.InfoWindow({content: contentString});
                     openInfoWindow.open(map, marker);
                   });
@@ -436,9 +430,7 @@
             
             //var contentString = '<a href="' + link + '" target="_blank">' + name + '</a>';
             marker.addListener('click', function() {
-              if(openInfoWindow) {
-                openInfoWindow.close();
-              }
+              clearMapOfClutter();
               openInfoWindow = new google.maps.InfoWindow({content: contentString});
               openInfoWindow.open(map, marker);
             });
@@ -473,30 +465,99 @@
       
       // Used to keep track of the currently opened infowindow so it can be closed automatically
       var openInfoWindow;
+      // Used to keep track of the temporary click mapmarker so it can be removed automatically
+      var tempMapMarker;
+      // Used to keep track of the actual mapmarkers so we don't create duplicate markers in one location
       var markersMap = {};
+      
+      //
+      // Close the openInfoWindow and clear the tempMapMarker if they exist
+      //
+      function clearMapOfClutter() {
+          if (openInfoWindow) {
+            openInfoWindow.close();
+          }
+          if (tempMapMarker) {
+            tempMapMarker.setMap(null)
+          }
+      }
+      
+      //
+      // Try to read the zoom level from the URL. If not found, return 9 as default.
+      //
+      function getZoomFromUrl() {
+        var startZoom = 9;
+        var href = decodeURI(window.location.href).toLowerCase();
+        // Should be in the form zoom=(INTEGER)
+        var szIndex = href.indexOf('zoom=');
+        if (szIndex > 0) {
+          var szInitialSubstring = href.substring(szIndex + 5);
+          var openParenIndex = szInitialSubstring.indexOf('(');
+          var closeParenIndex = szInitialSubstring.indexOf(')');
+          var szReqalSubstring = szInitialSubstring.substring(openParenIndex + 1, closeParenIndex).trim();
+          
+          console.log('Zoom substring is "' + szReqalSubstring + '"');
+          var maybeZoom = parseInt(szReqalSubstring);
+          if (maybeZoom > 0 && maybeZoom < 21) {
+            startZoom = maybeZoom;
+          } else {
+            console.log('Could not zoom to "' + maybeZoom + '". Must be int between 1 and 20.');
+          }
+        }
+        return startZoom;
+      }
+      
+      //
+      // Try to read the location from the URL. If not found, return Portland as default.
+      //
+      function getLocationFromUrl() {
+        var startLocation = new google.maps.LatLng(45.5200000, -122.6819444);
+        var href = decodeURI(window.location.href).toLowerCase();
+        // Should be in the form location=(FLOAT, FLOAT)
+        var slIndex = href.indexOf('location=');
+        if (slIndex > 0) {
+          var slInitialSubstring = href.substring(slIndex + 9);
+          var openParenIndex = slInitialSubstring.indexOf('(');
+          var closeParenIndex = slInitialSubstring.indexOf(')');
+          var commaIndex = slInitialSubstring.indexOf(',');
+          var latSubstring = slInitialSubstring.substring(openParenIndex + 1, commaIndex).trim();
+          var lonSubstring = slInitialSubstring.substring(commaIndex + 1, closeParenIndex).trim();
+          
+          console.log('Lat substring is "' + latSubstring + '"');
+          console.log('Lon substring is "' + lonSubstring + '"');
+          var maybeLat = parseFloat(latSubstring);
+          var maybeLon = parseFloat(lonSubstring);
+          
+          if (maybeLat > -90 && maybeLat < 90 && maybeLon > -180 && maybeLon < 180) {
+            startLocation = new google.maps.LatLng(maybeLat, maybeLon);
+          } else {
+            console.log('Could not start at (' + maybeLat + ', ' + maybeLon + '). ' + e);
+          }
+        }
+        return startLocation;
+      }
       
       //
       // Make the map
       //
       var mapElement = document.getElementById("map");
       //Build list of map types
-      var mapTypeIds = []
+      var mapTypeIds = [];
       for(var type in google.maps.MapTypeId) {
         mapTypeIds.push(google.maps.MapTypeId[type]);
       }
       mapTypeIds.push("OSM");
       mapTypeIds.push("TF Outdoors");
-      
+
       var map = new google.maps.Map(mapElement, {
-        // Center at Portland
-        center: new google.maps.LatLng(45.5200000, -122.6819444),
-        zoom: 9,
+        center: getLocationFromUrl(),
+        zoom: getZoomFromUrl(),
         mapTypeId: google.maps.MapTypeId.TERRAIN,
         mapTypeControlOptions: {
           mapTypeIds: mapTypeIds
         }
       });
-      
+
       // Add OSM tiles
       map.mapTypes.set("OSM", new google.maps.ImageMapType({
         getTileUrl: function(coord, zoom) {
@@ -516,6 +577,42 @@
         name: "OSM - TF Outdoors",
         maxZoom: 19
       }));
+
+      //
+      // On click, pop open an InfoWindow that shows the URL of the current location and zoom level. If the 'copy' button is pressed, try to copy to clipboard.
+      //
+      var contextMenu = google.maps.event.addListener(
+        map, "click",
+        function(event) {
+          var url = encodeURI('https://paradoxtrail.net/hikes.html?zoom=(' + map.zoom + ')&location=' + event.latLng);
+          var infoText = '<input type="text" id="share" value="' + url + '" /><br><center><button data-copytarget="#share">Copy</button></center>';
+
+          clearMapOfClutter();
+          openInfoWindow = new google.maps.InfoWindow({content: infoText});
+
+          tempMapMarker = new google.maps.Marker({
+            position: event.latLng
+          });
+          tempMapMarker.setMap(map)
+          openInfoWindow.open(map, tempMapMarker);
+
+          document.body.addEventListener('click', copyUrl, true);
+
+          function copyUrl() {
+            selectedElement = document.getElementById("share");
+            if (selectedElement && selectedElement.select) {
+              selectedElement.select();
+              try {
+                var successful = document.execCommand('copy');
+                selectedElement.blur();
+                console.log('Copying text "' + url + '" succeeded? ' + successful);
+              } catch (err) {
+                console.log('Unable to copy "' + url + '" ' + err);
+              }
+            }
+          }
+        }
+    );
     </script>
   </body>
 </html>
