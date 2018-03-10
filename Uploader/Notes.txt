@@ -1,0 +1,14 @@
+CREATE TABLE `parado91_hikes`.`hikepoints` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `pointfilename` VARCHAR(100) NULL,
+  `pointtitle` VARCHAR(100) NULL,
+  `pointdesc` VARCHAR(500) NULL,
+  `pointlat` VARCHAR(45) NULL,
+  `pointlon` VARCHAR(45) NULL,
+  `pointtype` VARCHAR(45) NULL,
+  PRIMARY KEY (`id`));
+
+cd "/mnt/c/Users/dakka/Desktop/Hike Tracker/hike-tracker/Uploader"
+  
+  
+  

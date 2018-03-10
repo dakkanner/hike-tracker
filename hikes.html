@@ -45,6 +45,22 @@
       // Colors for tracks with elevation data
       var REDS = ['#000000', '#200000', '#400000', '#600000', '#800000', '#A00000', '#C00000', '#E00000', '#FF0000']
       
+      // Call the SQL query and get the JSON output
+      $.ajax({
+        url: "/getpoints.php",
+        success: function(data){
+          console.log(data);
+          data.forEach(function(pointObject) {
+            outputImageFunction2(pointObject.pointfilename,
+              pointObject.pointtitle,
+              pointObject.pointdesc,
+              pointObject.pointlat,
+              pointObject.pointlon,
+              pointObject.pointtype);
+          });
+        }
+      })
+      
       // Have the client read through all files in the gpx index (Obviously the best choice here - scales so good)
       $.ajax({
         url: "gpx/",
@@ -58,11 +74,12 @@
             var file = $(this).attr("href");
             outputGpxFunction(file);
             outputTcxFunction(file);
-            outputImageFunction(file);
+            outputEmbedFunction(file);
             outputPhotoSphereFunction(file);
           });
         }
       });
+      
       
       function metersToFeet(valueInMeters) {
         return Math.round(valueInMeters * 3.28);
@@ -146,11 +163,11 @@
                   strokeWeight: 2
                 });
                 
-                var contentString;
+                var contentString = '<b>' + gpxFileURL + '</b><br>'
                 if (minElevation != 10000) {
-                  contentString = metersToFeet(minElevation) + 'ft to ' + metersToFeet(maxElevation) + 'ft (' + metersToFeet(totalElevation) + 'ft)';
+                  contentString += metersToFeet(minElevation) + 'ft to ' + metersToFeet(maxElevation) + 'ft (' + metersToFeet(totalElevation) + 'ft total elevation diff)';
                 } else {
-                  contentString = 'No elevation data in this track';
+                  contentString += 'No elevation data in this track';
                 }
                 currentHike.addListener('click', function() {
                   clearMapOfClutter();
@@ -266,12 +283,12 @@
                   strokeWeight: 2
                 });
             
-                var contentString;
+                var contentString = '<b>' + tcxFileURL + '</b><br>'
                 
                 if (minElevation != 10000) {
-                  contentString = metersToFeet(minElevation) + 'ft to ' + metersToFeet(maxElevation) + 'ft (' + metersToFeet(totalElevation) + 'ft)';
+                  contentString += metersToFeet(minElevation) + 'ft to ' + metersToFeet(maxElevation) + 'ft (' + metersToFeet(totalElevation) + 'ft total elevation diff)';
                 } else {
-                  contentString = 'No elevation data in this track';
+                  contentString += 'No elevation data in this track';
                 }
                 
                 if (totalDistance > 0) {
@@ -387,6 +404,46 @@
         xhr.send();
       }
       
+     
+      /**
+      * Create a marker on the map from data about an image file.
+      */
+      function outputImageFunction2(pointFilename,
+              pointTitle,
+              pointDesc,
+              pointLat,
+              pointLon,
+              pointType) {
+      
+        var smallIcon = {
+          url: 'https://maps.google.com/mapfiles/ms/icons/blue.png',
+          // This marker will be 20 pixels wide by 20 pixels high.
+          scaledSize: new google.maps.Size(20, 20),
+        };
+        
+        // Prevent duplicate marker locations
+        while (markersMap[pointLon]) {
+          // Also gdit JS. += is strcat and -= is numeric
+          pointLon -= .0002
+        }
+        markersMap[pointLon] = pointLon;
+        
+        var imageLatLng = new google.maps.LatLng(pointLat, pointLon);
+        var marker = new google.maps.Marker({
+          position: imageLatLng,
+          icon: smallIcon
+        });
+        
+        var contentString = '<b>' + pointTitle + '</b><br><a href="gpx/photos/' + pointFilename + '" target="_blank"><img src="gpx/thumbnails/thumbnail_' + pointFilename + '"></a>';
+        marker.addListener('click', function() {
+          clearMapOfClutter();
+          openInfoWindow = new google.maps.InfoWindow({content: contentString});
+          openInfoWindow.open(map, marker);
+        });
+
+        marker.setMap(map);
+      }
+      
       /**
       * Create a PhotoSphere marker on the map from a .sphere custom file. If the file is not '.sphere', return.
       */
@@ -424,6 +481,64 @@
             var marker = new google.maps.Marker({
               position: imageLatLng,
               icon: sphereIcon
+            });
+            
+            var contentString = '<a href="' + link + '" target="_blank">' + name + ' (open in a new tab)</a><br><iframe src="' + link + '" height="400px" width="600px" scrolling="no"></iframe>';
+            
+            //var contentString = '<a href="' + link + '" target="_blank">' + name + '</a>';
+            marker.addListener('click', function() {
+              clearMapOfClutter();
+              openInfoWindow = new google.maps.InfoWindow({content: contentString});
+              openInfoWindow.open(map, marker);
+            });
+
+            marker.setMap(map);
+            
+            incrementProgress();
+          }
+        };
+
+        xhr.send();
+      }
+      
+      
+      /**
+      * Create an embedded video marker on the map from a .embed custom file. If the file is not '.embed', return.
+      */
+      function outputEmbedFunction(sphereFileURL) {
+        if (!sphereFileURL || !sphereFileURL.toLowerCase().endsWith('.embed')) {
+          return;
+        }
+        
+        var videoIcon = {
+          url: 'images/video.png',
+          // This marker will be 20 pixels wide by 20 pixels high.
+          scaledSize: new google.maps.Size(20, 20),
+        };
+      
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', "gpx/" + sphereFileURL, true);
+        xhr.responseType = 'document';
+        xhr.origin = 'Access-Control-Allow-Origin=*'
+
+        xhr.onload = function(e) {
+          if (this.status == 200) {            
+            var name = this.response.getElementsByTagName('name')[0].textContent;
+            var lat = this.response.getElementsByTagName('lat')[0].textContent;
+            var lon = this.response.getElementsByTagName('lon')[0].textContent;
+            var link = this.response.getElementsByTagName('link')[0].textContent;
+            
+            // Prevent duplicate marker locations
+            while (markersMap[lon]) {
+              // Also gdit JS. += is strcat and -= is numeric
+              lon -= .0002
+            }
+            markersMap[lon] = lat;
+                  
+            var imageLatLng = new google.maps.LatLng(lat, lon);
+            var marker = new google.maps.Marker({
+              position: imageLatLng,
+              icon: videoIcon
             });
             
             var contentString = '<a href="' + link + '" target="_blank">' + name + ' (open in a new tab)</a><br><iframe src="' + link + '" height="400px" width="600px" scrolling="no"></iframe>';
@@ -483,10 +598,10 @@
       }
       
       //
-      // Try to read the zoom level from the URL. If not found, return 9 as default.
+      // Try to read the zoom level from the URL. If not found, return 7 as default (lower = more zoomed out).
       //
       function getZoomFromUrl() {
-        var startZoom = 9;
+        var startZoom = 7;
         var href = decodeURI(window.location.href).toLowerCase();
         // Should be in the form zoom=(INTEGER)
         var szIndex = href.indexOf('zoom=');
@@ -557,7 +672,7 @@
           mapTypeIds: mapTypeIds
         }
       });
-
+      
       // Add OSM tiles
       map.mapTypes.set("OSM", new google.maps.ImageMapType({
         getTileUrl: function(coord, zoom) {
@@ -577,7 +692,7 @@
         name: "OSM - TF Outdoors",
         maxZoom: 19
       }));
-
+      
       //
       // On click, pop open an InfoWindow that shows the URL of the current location and zoom level. If the 'copy' button is pressed, try to copy to clipboard.
       //
@@ -586,18 +701,18 @@
         function(event) {
           var url = encodeURI('https://paradoxtrail.net/hikes.html?zoom=(' + map.zoom + ')&location=' + event.latLng);
           var infoText = '<input type="text" id="share" value="' + url + '" /><br><center><button data-copytarget="#share">Copy</button></center>';
-
+          
           clearMapOfClutter();
           openInfoWindow = new google.maps.InfoWindow({content: infoText});
-
+          
           tempMapMarker = new google.maps.Marker({
             position: event.latLng
           });
           tempMapMarker.setMap(map)
           openInfoWindow.open(map, tempMapMarker);
-
+          
           document.body.addEventListener('click', copyUrl, true);
-
+          
           function copyUrl() {
             selectedElement = document.getElementById("share");
             if (selectedElement && selectedElement.select) {
